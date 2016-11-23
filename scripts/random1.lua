@@ -28,50 +28,47 @@ function init(args)
    startSeed = os.time() + os.clock() + thread_id
    math.randomseed(startSeed)
 
-   local msg = "thread %d created"
-   print(msg:format(thread_id))
+   -- local msg = "thread %d created"
+   -- print(msg:format(thread_id))
 
    if thread_id == 1 then
-      request = requestEcho
-      response = handleEchoResponse
-      delay = delayEcho
+      delay = echoDelay
+      request = echoRequest
+      response = echoHandleResponse
    else
-      request = requestFile
-      response = handleFileResponse
-      -- delay = delayFile
+      request = fileRequest
+      response = fileHandleResponse
    end
 
 end
 
-delayEcho = function ()
-   io.write("inside delay\n")
-   return 10
+echoDelay = function ()
+   return 1000
 end
 
-requestEcho = function()
-
-   io.write("inside echo request\n")
+echoRequest = function()
 
    wrk.headers["Connection"] = "Keep-Alive"
 
-   path = "/echo"
    now = os.clock()
-   return wrk.format("GET", path), now
+--    io.write("inside echo request " .. tostring(now) .."\n")
+
+   return wrk.format("GET", path), tostring(now)
 end
 
-handleEchoResponse = function(status, headers, body, startTime)
-   io.write("inside echo reply\n")
+echoHandleResponse = function(status, headers, body, startTime)
+--    io.write("inside echo reply" .. thread_id .. "\n")
    now = os.clock()
-   -- diff = now - tonumber(startTime)
+   diff = 1000 * (now - tonumber(startTime))
 
-   io.write("echo - reply - " .. thread_id .. ":" .. now .. "," .. startTime .. "....ms\n")
+   io.write(os.date("%Y-%m-%d %X") .. " echo reply " .. diff .. " ms\n")
 end
 
 -- delayFile = function ()
 --    return 0
 -- end
 
-requestFile = function()
+fileRequest = function()
    local requestType;
    if activeLongTail == 0 or activeLongTail*100 / (activeShortHead + activeLongTail) < 20 then
       requestType = "2"
@@ -130,7 +127,7 @@ requestFile = function()
    return wrk.format("GET", path), requestType
 end
 
-requestCFile = function()
+cfileRequest = function()
    local requestType;
    if activeLongTail == 0 or activeLongTail*100 / (activeShortHead + activeLongTail) < 10 then
       requestType = "2"
@@ -184,7 +181,7 @@ requestCFile = function()
    return wrk.format("GET", path), requestType
 end
 
-handleFileResponse = function(status, headers, body, requestType)
+fileHandleResponse = function(status, headers, body, requestType)
    if requestType == "1" then
       totalShortHead = totalShortHead + 1
       activeShortHead = activeShortHead - 1
