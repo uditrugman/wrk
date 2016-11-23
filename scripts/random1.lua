@@ -1,3 +1,4 @@
+
 random = function (from, to)
    return math.random(from, to)
 end
@@ -50,7 +51,7 @@ echoRequest = function()
 
    wrk.headers["Connection"] = "Keep-Alive"
 
-   now = os.clock()
+   now = wrk.gettimeofday() --os.clock()
 --    io.write("inside echo request " .. tostring(now) .."\n")
 
    return wrk.format("GET", path), tostring(now)
@@ -58,8 +59,8 @@ end
 
 echoHandleResponse = function(status, headers, body, startTime)
 --    io.write("inside echo reply" .. thread_id .. "\n")
-   now = os.clock()
-   diff = 1000 * (now - tonumber(startTime))
+   now = wrk.gettimeofday() --os.clock()
+   diff = math.floor(now - tonumber(startTime))
 
    io.write(os.date("%Y-%m-%d %X") .. " echo reply " .. diff .. " ms\n")
 end
@@ -92,16 +93,16 @@ fileRequest = function()
    if requestType == "1" then
       activeShortHead = activeShortHead + 1
 
-	   -- partition = random(0,6)
-	   -- l1 = random(0,15)
-	   -- l2 = random(0,255)
+      -- partition = random(0,6)
+      -- l1 = random(0,15)
+      -- l2 = random(0,255)
       fileno = random(0,100)
    else
       activeLongTail = activeLongTail + 1
 
-	   -- partition = random(0,3)
-	   l1 = random(0,15)
-	   l2 = random(0,255)
+      -- partition = random(0,3)
+      l1 = random(0,15)
+      l2 = random(0,255)
       fileno = random(0,999)
    end
 
@@ -111,9 +112,9 @@ fileRequest = function()
    -- l2 = 0 --random(0,255)
 
    if (fileno > 1040) then
-   	sendfile = 1
+      sendfile = 1
    else
-   	sendfile = 0
+      sendfile = 0
    end
 
    sendfile = 0
