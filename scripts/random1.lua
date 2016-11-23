@@ -2,36 +2,19 @@ random = function (from, to)
    return math.random(from, to)
 end
 
--- do
---    local randomtable
---    random = function (from, to)
---       if randomtable == nil then
---          randomtable = {}
---          for i = 1, 97 do
---             randomtable[i] = math.random()
---          end
---       end
---       local x = math.random()
---       local i = 1 + math.floor(97*x)
---       x, randomtable[i] = randomtable[i], x
-
---       result = math.floor(x * ((to-from + 1) + from))
---       return result
---    end
--- end
-
 local threadCount = 1
 local threads = {}
 
 function setup(thread)
-   local msg = "setup thread %d"
-   print(msg:format(threadCount))
-   io.write("here\n")
-
-   thread:set("thread_id", threadCount)
-   table.insert(threads, thread)
+   thread_id = threadCount
    threadCount = threadCount + 1
-   thread:setConnections(10)
+
+   thread:set("thread_id", thread_id)
+   table.insert(threads, thread)
+   if thread_id == 1 then
+      thread:setConnections(1)
+   end
+
 end
 
 local activeShortHead = 0;
@@ -43,21 +26,52 @@ function init(args)
    totalLongTail = 0;
 
    startSeed = os.time() + os.clock() + thread_id
-
    math.randomseed(startSeed)
-   -- math.random(); math.random(); math.random();
 
-   -- partition = random(0,7)
+   local msg = "thread %d created"
+   print(msg:format(thread_id))
 
-   -- io.write(thread_id .. " startSeed:" .. startSeed .. "\n")
-   -- io.write(thread_id .. " partition:" .. partition .. "\n")
+   if thread_id == 1 then
+      request = requestEcho
+      response = handleEchoResponse
+      delay = delayEcho
+   else
+      request = requestFile
+      response = handleFileResponse
+      -- delay = delayFile
+   end
 
-   -- local msg = "thread %d created"
-   -- print(msg:format(thread_id))
 end
 
+delayEcho = function ()
+   io.write("inside delay\n")
+   return 10
+end
 
-request = function()
+requestEcho = function()
+
+   io.write("inside echo request\n")
+
+   wrk.headers["Connection"] = "Keep-Alive"
+
+   path = "/echo"
+   now = os.clock()
+   return wrk.format("GET", path), now
+end
+
+handleEchoResponse = function(status, headers, body, startTime)
+   io.write("inside echo reply\n")
+   now = os.clock()
+   -- diff = now - tonumber(startTime)
+
+   io.write("echo - reply - " .. thread_id .. ":" .. now .. "," .. startTime .. "....ms\n")
+end
+
+-- delayFile = function ()
+--    return 0
+-- end
+
+requestFile = function()
    local requestType;
    if activeLongTail == 0 or activeLongTail*100 / (activeShortHead + activeLongTail) < 20 then
       requestType = "2"
@@ -94,7 +108,7 @@ request = function()
       fileno = random(0,999)
    end
 
-   -- fileno = 0 --random(0,4)
+   -- fileno = 1030 --random(0,4)
    -- -- partition = random(0,6)
    -- l1 = 0 --random(0,1)
    -- l2 = 0 --random(0,255)
@@ -106,8 +120,9 @@ request = function()
    end
 
    sendfile = 0
+   verify = 0
 
-   path = "/file?partition=" .. partition .. "&l1=" .. l1 .. "&l2=" .. l2 .. "&fileno=" .. fileno .. "&sendfile=" .. sendfile
+   path = "/f/" .. partition .. "/" .. l1 .. "/" .. l2 .. "/" .. fileno .. "/" .. sendfile .. "/" .. verify
 
    -- io.write(path .."\n")
    wrk.headers["Connection"] = "Keep-Alive"
@@ -115,7 +130,61 @@ request = function()
    return wrk.format("GET", path), requestType
 end
 
-response = function(status, headers, body, requestType)
+requestCFile = function()
+   local requestType;
+   if activeLongTail == 0 or activeLongTail*100 / (activeShortHead + activeLongTail) < 10 then
+      requestType = "2"
+   else
+      requestType = "1"
+   end
+   -- if activeLongTail < 6 then
+   --    requestType = "2"
+   -- else
+   --    requestType = "1"
+   -- end
+
+   -- requestType = "1"
+   -- requestType = "2"
+
+   partition = random(0,7)
+   l1 = 0
+   fileno = 0
+   slot = 0
+
+   if requestType == "1" then
+      activeShortHead = activeShortHead + 1
+
+      -- partition = random(0,6)
+      -- l1 = random(0,15)
+      -- l2 = random(0,255)
+      fileno = random(0,7)
+      slot = random(0,1000)
+   else
+      activeLongTail = activeLongTail + 1
+
+      -- partition = random(0,3)
+      l1 = random(0,15)
+      fileno = random(0,7)
+      slot = random(0,1000)
+   end
+
+   -- fileno = 0 --random(0,4)
+   -- -- partition = random(0,6)
+   -- l1 = 0 --random(0,1)
+   -- l2 = 0 --random(0,255)
+
+   sendfile = 0
+   verify = 0
+
+   path = "/cfile?partition=" .. partition .. "&l1=" .. l1 .. "&fileno=" .. fileno .. "&slot=" .. slot .. "&sendfile=" .. sendfile .. "&verify=" .. verify
+
+   -- io.write(path .."\n")
+   wrk.headers["Connection"] = "Keep-Alive"
+
+   return wrk.format("GET", path), requestType
+end
+
+handleFileResponse = function(status, headers, body, requestType)
    if requestType == "1" then
       totalShortHead = totalShortHead + 1
       activeShortHead = activeShortHead - 1

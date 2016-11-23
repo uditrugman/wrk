@@ -118,13 +118,11 @@ int main(int argc, char **argv) {
             t->pipeline = script_verify_request(t->L);
             t->dynamic  = !script_is_static(t->L);
             t->delay    = script_has_delay(t->L);
+            t->parser_settings.on_message_complete = response_complete;
             if (script_want_response(t->L)) {
                 t->parser_settings.on_header_field = header_field;
                 t->parser_settings.on_header_value = header_value;
                 t->parser_settings.on_body         = response_body;
-            } else {
-                t->parser_settings.on_message_complete = response_complete;
-
             }
         // }
     }
