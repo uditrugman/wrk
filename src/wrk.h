@@ -36,6 +36,10 @@ typedef struct {
     lua_State *L;
     errors errors;
     struct connection *cs;
+    uint64_t pipeline;
+    bool     delay;
+    bool     dynamic;
+    struct http_parser_settings parser_settings;
 } thread;
 
 typedef struct {

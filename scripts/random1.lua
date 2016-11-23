@@ -24,9 +24,14 @@ local threadCount = 1
 local threads = {}
 
 function setup(thread)
+   local msg = "setup thread %d"
+   print(msg:format(threadCount))
+   io.write("here\n")
+
    thread:set("thread_id", threadCount)
    table.insert(threads, thread)
    threadCount = threadCount + 1
+   thread:setConnections(10)
 end
 
 local activeShortHead = 0;

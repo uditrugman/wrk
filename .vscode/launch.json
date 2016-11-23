@@ -1,0 +1,104 @@
+{
+    "version": "0.2.0",
+    "configurations": [{
+            "name": "gdbserver-tlv",
+            "type": "cppdbg",
+            "request": "launch",
+            "miDebuggerServerAddress": "tlv-lp9cj.telaviv.corp.akamai.com:2345",
+            "program": "${workspaceRoot}/out/debug.linux/main",
+            "cwd": "${workspaceRoot}",
+            "linux": {
+                "MIMode": "gdb"
+            },
+            "osx": {
+                "MIMode": "gdb",
+                "miDebuggerPath": "/Users/utrugman/Downloads/g/gdb-7.12/gdb/gdb"
+            },
+            "windows": {
+                "MIMode": "gdb"
+            }
+        },
+        {
+            "name": "gdb-ssh-tlv",
+            "type": "gdb",
+            "request": "launch",
+            "target": "${workspaceRoot}/out/debug.linux/main",
+            "cwd": "${workspaceRoot}",
+            "gdbpath": "/home/utrugman/gdb",
+            "ssh": {
+                "host": "tlv-lp9cj.telaviv.corp.akamai.com",
+                "user": "utrugman",
+                "keyfile": "/Users/utrugman/.ssh/tlv_dsa",
+                "cwd": "/home/utrugman/work/akamai/stmetadb"
+            }
+        },
+        {
+            "name": "gdb-ssh",
+            "type": "gdb",
+            "request": "launch",
+            "target": "${workspaceRoot}/out/debug.linux/main",
+            "cwd": "${workspaceRoot}",
+            "ssh": {
+                "host": "localhost",
+                "port": 22222,
+                "user": "root",
+                "password": "pronto",
+                "cwd": "${workspaceRoot}"
+            }
+        },
+        {
+            "name": "gdbserver",
+            "type": "cppdbg",
+            "request": "launch",
+            "miDebuggerServerAddress": "localhost:2345",
+            "program": "${workspaceRoot}/out/debug.linux/main",
+            "cwd": "${workspaceRoot}",
+            "linux": {
+                "MIMode": "gdb"
+            },
+            "osx": {
+                "MIMode": "gdb",
+                "miDebuggerPath": "/Users/utrugman/Downloads/g/gdb-7.12/gdb/gdb"
+            },
+            "windows": {
+                "MIMode": "gdb"
+            }
+        },
+        {
+            "name": "C++ Launch",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceRoot}/wrk",
+            "args": ["-t", "1", "-d", "10", "-s", "scripts/random1.lua", "http://10.0.0.5:80"],
+            "stopAtEntry": true,
+            "cwd": "${workspaceRoot}",
+            "environment": [],
+            "externalConsole": false,
+            "linux": {
+                "MIMode": "gdb"
+            },
+            "osx": {
+                "MIMode": "lldb"
+            },
+            "windows": {
+                "MIMode": "gdb"
+            }
+        },
+        {
+            "name": "C++ Attach",
+            "type": "cppdbg",
+            "request": "attach",
+            "program": "enter program name, for example ${workspaceRoot}/a.out",
+            "processId": "${command.pickProcess}",
+            "linux": {
+                "MIMode": "gdb"
+            },
+            "osx": {
+                "MIMode": "lldb"
+            },
+            "windows": {
+                "MIMode": "gdb"
+            }
+        }
+    ]
+}

@@ -9,9 +9,6 @@ static struct config {
     uint64_t duration;
     uint64_t threads;
     uint64_t timeout;
-    uint64_t pipeline;
-    bool     delay;
-    bool     dynamic;
     bool     latency;
     char    *host;
     char    *script;
@@ -31,9 +28,9 @@ static struct sock sock = {
     .readable = sock_readable
 };
 
-static struct http_parser_settings parser_settings = {
-    .on_message_complete = response_complete
-};
+// static struct http_parser_settings parser_settings_udi = {
+//     .on_message_complete = response_complete
+// };
 
 static volatile sig_atomic_t stop = 0;
 
@@ -101,23 +98,41 @@ int main(int argc, char **argv) {
 
     cfg.host = host;
 
+    uint64_t totalConnectionsSet = 0;
+    uint64_t totalThreadsWithConnectionsSet = 0;
+
     for (uint64_t i = 0; i < cfg.threads; i++) {
         thread *t      = &threads[i];
         t->loop        = aeCreateEventLoop(10 + cfg.connections * 3);
-        t->connections = cfg.connections / cfg.threads;
+        t->connections = 0;
 
         t->L = script_create(cfg.script, url, headers);
         script_init(L, t, argc - optind, &argv[optind]);
 
-        if (i == 0) {
-            cfg.pipeline = script_verify_request(t->L);
-            cfg.dynamic  = !script_is_static(t->L);
-            cfg.delay    = script_has_delay(t->L);
+        if (t->connections > 0) {
+            totalConnectionsSet += t->connections;
+            totalThreadsWithConnectionsSet++;
+        }
+
+        // if (i == 0) {
+            t->pipeline = script_verify_request(t->L);
+            t->dynamic  = !script_is_static(t->L);
+            t->delay    = script_has_delay(t->L);
             if (script_want_response(t->L)) {
-                parser_settings.on_header_field = header_field;
-                parser_settings.on_header_value = header_value;
-                parser_settings.on_body         = response_body;
+                t->parser_settings.on_header_field = header_field;
+                t->parser_settings.on_header_value = header_value;
+                t->parser_settings.on_body         = response_body;
+            } else {
+                t->parser_settings.on_message_complete = response_complete;
+
             }
+        // }
+    }
+
+    for (uint64_t i = 0; i < cfg.threads; i++) {
+        thread *t      = &threads[i];
+        if (t->connections == 0) {
+            t->connections = (cfg.connections - totalConnectionsSet) / (cfg.threads - totalThreadsWithConnectionsSet);
         }
 
         if (!t->loop || pthread_create(&t->thread, NULL, &thread_main, t)) {
@@ -205,7 +220,7 @@ void *thread_main(void *arg) {
     char *request = NULL;
     size_t length = 0;
 
-    if (!cfg.dynamic) {
+    if (!thread->dynamic) {
         script_request(thread->L, &request, &length, NULL, 0);
     }
 
@@ -217,7 +232,7 @@ void *thread_main(void *arg) {
         c->ssl     = cfg.ctx ? SSL_new(cfg.ctx) : NULL;
         c->request = request;
         c->length  = length;
-        c->delayed = cfg.delay;
+        c->delayed = thread->delay;
         connect_socket(thread, c);
     }
 
@@ -352,7 +367,7 @@ static int response_complete(http_parser *parser) {
         if (!stats_record(statistics.latency, now - c->start)) {
             thread->errors.timeout++;
         }
-        c->delayed = cfg.delay;
+        c->delayed = thread->delay;
         aeCreateFileEvent(thread->loop, c->fd, AE_WRITABLE, socket_writeable, sess);
     }
 
@@ -405,11 +420,11 @@ static void socket_writeable(aeEventLoop *loop, int fd, void *data, int mask) {
     }
 
     if (!c->written) {
-        if (cfg.dynamic) {
+        if (thread->dynamic) {
             script_request(thread->L, &c->request, &c->length, &sess->id, &sess->len);
         }
         c->start   = time_us();
-        c->pending = cfg.pipeline;
+        c->pending = thread->pipeline;
     }
 
     char  *buf = c->request + c->written;
@@ -438,6 +453,7 @@ static void socket_writeable(aeEventLoop *loop, int fd, void *data, int mask) {
 static void socket_readable(aeEventLoop *loop, int fd, void *data, int mask) {
     session *sess = data;
     connection *c = sess->c;
+    thread *thread = c->thread;
     size_t n;
 
     do {
@@ -447,7 +463,7 @@ static void socket_readable(aeEventLoop *loop, int fd, void *data, int mask) {
             case RETRY: return;
         }
 
-        if (http_parser_execute(&c->parser, &parser_settings, c->buf, n) != n) goto error;
+        if (http_parser_execute(&c->parser, &thread->parser_settings, c->buf, n) != n) goto error;
         if (n == 0 && !http_body_is_final(&c->parser)) goto error;
 
         c->thread->bytes += n;

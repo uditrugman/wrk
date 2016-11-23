@@ -415,6 +415,15 @@ static int script_thread_set(lua_State *L) {
     return 0;
 }
 
+static int script_thread_setConnections(lua_State *L) {
+    thread *t = checkthread(L);
+    lua_Integer connections = lua_tointeger(L, -1);
+    if (t->connections == 0) {
+        t->connections = connections;
+    }
+    return 0;
+}
+
 static int script_thread_stop(lua_State *L) {
     thread *t = checkthread(L);
     aeStop(t->loop);
@@ -428,6 +437,9 @@ static int script_thread_index(lua_State *L) {
     if (!strcmp("set",  key)) lua_pushcfunction(L, script_thread_set);
     if (!strcmp("stop", key)) lua_pushcfunction(L, script_thread_stop);
     if (!strcmp("addr", key)) script_addr_clone(L, t->addr);
+    if (!strcmp("setConnections", key)) {
+        lua_pushcfunction(L, script_thread_setConnections);
+    }
     return 1;
 }
 
